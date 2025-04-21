@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 function Assignments() {
-  const [expanded, setExpanded] = useState(null); // Track which assignment is opened
+  const [expanded, setExpanded] = useState(null);
   const [files, setFiles] = useState({});
   const [messages, setMessages] = useState({});
 
@@ -13,18 +13,72 @@ function Assignments() {
   ];
 
   const handleFileChange = (e, id) => {
-    setFiles({ ...files, [id]: Array.from(e.target.files) });
-    setMessages({ ...messages, [id]: "" });
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = [
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ];
+    const selectedFiles = Array.from(e.target.files);
+    const validFiles = [];
+    let errorMessages = [];
+
+    if (selectedFiles.length > 3) {
+      errorMessages.push("You can only upload up to 3 files.");
+    }
+
+    selectedFiles.forEach((file) => {
+      if (!allowedTypes.includes(file.type)) {
+        errorMessages.push(`${file.name} has an unsupported file type.`);
+      } else if (file.size > maxFileSize) {
+        errorMessages.push(`${file.name} exceeds the 5MB size limit.`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errorMessages.length > 0) {
+      setMessages((prev) => ({ ...prev, [id]: errorMessages.join(" ") }));
+    } else {
+      setMessages((prev) => ({ ...prev, [id]: "" }));
+    }
+
+    setFiles((prev) => ({ ...prev, [id]: validFiles }));
   };
 
-  const handleSubmit = (e, id) => {
+  const handleSubmit = async (e, id) => {
     e.preventDefault();
-    if (files[id] && files[id].length > 0) {
-      const uploadedNames = files[id].map((file) => file.name).join(", ");
-      setMessages({ ...messages, [id]: `Uploaded: ${uploadedNames}` });
-      setFiles({ ...files, [id]: [] }); // reset files
-    } else {
-      setMessages({ ...messages, [id]: "Please select at least one file." });
+
+    if (!files[id] || files[id].length === 0) {
+      setMessages((prev) => ({ ...prev, [id]: "Please select at least one valid file." }));
+      return;
+    }
+
+    try {
+      const uploadResults = await Promise.all(
+        files[id].map(async (file) => {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("assignment_id", id);
+
+          const response = await fetch("http://localhost:8000/upload/", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`Upload failed for ${file.name}`);
+          }
+
+          return await response.json();
+        })
+      );
+
+      const uploadedNames = uploadResults.map((res) => res.original_filename).join(", ");
+      setMessages((prev) => ({ ...prev, [id]: `Uploaded: ${uploadedNames}` }));
+      setFiles((prev) => ({ ...prev, [id]: [] }));
+    } catch (err) {
+      console.error("Upload error:", err);
+      setMessages((prev) => ({ ...prev, [id]: "Upload failed. Please try again." }));
     }
   };
 
@@ -33,14 +87,8 @@ function Assignments() {
       <h2 className="text-2xl font-bold mb-4">Assignments</h2>
       <ul className="space-y-4">
         {assignments.map((item) => (
-          <li
-            key={item.id}
-            className="border rounded shadow-sm bg-white p-4"
-          >
-            <div
-              className="cursor-pointer"
-              onClick={() => setExpanded(expanded === item.id ? null : item.id)}
-            >
+          <li key={item.id} className="border rounded shadow-sm bg-white p-4">
+            <div className="cursor-pointer" onClick={() => setExpanded(expanded === item.id ? null : item.id)}>
               <div className="flex justify-between items-center">
                 <div>
                   <div className="font-medium">{item.title}</div>
@@ -54,12 +102,10 @@ function Assignments() {
             </div>
 
             {expanded === item.id && (
-              <form
-                onSubmit={(e) => handleSubmit(e, item.id)}
-                className="mt-4 space-y-3"
-              >
+              <form onSubmit={(e) => handleSubmit(e, item.id)} className="mt-4 space-y-3">
                 <input
                   type="file"
+                  accept=".doc,.docx"
                   multiple
                   onChange={(e) => handleFileChange(e, item.id)}
                   className="w-full border px-3 py-2 rounded"
@@ -81,7 +127,7 @@ function Assignments() {
                 </button>
 
                 {messages[item.id] && (
-                  <p className="text-sm mt-1 text-blue-700">
+                  <p className={`text-sm mt-1 ${messages[item.id].startsWith("Uploaded") ? "text-blue-700" : "text-red-600"}`}>
                     {messages[item.id]}
                   </p>
                 )}
@@ -95,10 +141,3 @@ function Assignments() {
 }
 
 export default Assignments;
-
-
-
-
-
-
-  
