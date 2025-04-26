@@ -1,9 +1,11 @@
 import React from "react";
 
 function Dashboard() {
+  const userName = localStorage.getItem("user_name") || "Student";
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-center">Welcome back, Student!</h2>
+      <h2 className="text-2xl font-bold text-center">Welcome back, {userName}!</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="border p-4 rounded-lg shadow text-center">
@@ -33,23 +35,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

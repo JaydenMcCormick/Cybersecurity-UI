@@ -1,10 +1,20 @@
+// src/pages/Profile.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../utils/auth";
 
 function Profile() {
   const [profile, setProfile] = useState({
-    name: "Jadyen Hose",
+    name: localStorage.getItem("user_name") || "Student",
     email: "jadyen1811@eagle.fgcu.edu",
   });
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <div>
@@ -37,17 +47,16 @@ function Profile() {
         <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
           Save Changes
         </button>
+
+        <button
+          onClick={handleLogout}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full mt-4"
+        >
+          Logout
+        </button>
       </div>
     </div>
   );
 }
 
 export default Profile;
-
-
-
-
-
-
-
-  
