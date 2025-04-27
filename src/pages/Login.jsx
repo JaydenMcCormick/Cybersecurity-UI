@@ -27,8 +27,20 @@ function Login() {
           navigate("/");
         }, 1200);
       } else {
-        const errData = await response.json();
-        setError(errData.detail);
+        let errMessage = "Login failed.";
+        try {
+          const errData = await response.json();
+          if (Array.isArray(errData)) {
+            // If FastAPI validation error array
+            errMessage = errData.map((e) => e.msg).join(", ");
+          } else if (errData.detail) {
+            // If FastAPI custom error object
+            errMessage = errData.detail;
+          }
+        } catch (err) {
+          errMessage = "Invalid server response.";
+        }
+        setError(errMessage);
       }
     } catch (error) {
       setError("An error occurred. Please try again.");
@@ -41,30 +53,9 @@ function Login() {
     <div className="relative min-h-screen flex items-center justify-center">
       {/* Loading */}
       {loading && (
-        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="flex flex-col items-center space-y-4">
-            <svg
-              className="animate-spin h-10 w-10 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l5-5-5-5v4a12 12 0 00-8 12h4z"
-              ></path>
-            </svg>
-            <span className="text-white text-lg">Logging in...</span>
-          </div>
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-3 text-gray-700">Loading...</p>
         </div>
       )}
 
@@ -89,7 +80,15 @@ function Login() {
             disabled={loading}
           />
 
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {error && (
+            <div className="text-red-500 text-sm">
+              {typeof error === "string"
+                ? error
+                : Array.isArray(error)
+                ? error.map((e) => e.msg).join(", ")
+                : JSON.stringify(error)}
+            </div>
+          )}
           {success && <div className="text-green-500 text-sm">{success}</div>}
 
           <button
